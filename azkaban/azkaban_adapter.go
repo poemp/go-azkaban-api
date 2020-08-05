@@ -10,11 +10,14 @@ import (
 	"strings"
 )
 
+type Adapter struct {
+	SessionId string
+}
 // it's get request
 //will return json string
 //AzkabanConfig azkaban config
 // tail request path
-func Get(config inter.AzkabanConfig, tail string) string {
+func (adapter Adapter) Get(config inter.AzkabanConfig, tail string) string {
 	client := &http.Client{}
 	request, err := http.NewRequest("GET", config.Url+tail, nil) //建立一个请求
 	if err != nil {
@@ -46,7 +49,7 @@ func Get(config inter.AzkabanConfig, tail string) string {
 //return response json string
 //AzkabanConfig azkaban config
 // tail request path
-func Post(config inter.AzkabanConfig, pars map[string]string, tail string) string {
+func (adapter Adapter) Post(config inter.AzkabanConfig, pars map[string]string, tail string) string {
 	client := &http.Client{}
 	resultByte, errError := json.Marshal(pars)
 	if errError != nil {
@@ -86,7 +89,8 @@ func Login() string {
 		"username": azkabanConfig.UserName,
 		"password": azkabanConfig.Password,
 	}
-	reqeust := Post(azkabanConfig, par, "")
+	d := Adapter{}
+	reqeust := d.Post(azkabanConfig, par, "")
 	fmt.Println("Response String  ", reqeust)
 	return ""
 }
