@@ -1,6 +1,7 @@
 package azkaban
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/poemp/go-azkaban-api/inter"
 	"io/ioutil"
@@ -10,9 +11,12 @@ import (
 )
 
 // it's get request
-func Get(config inter.AzkabanConfig)  {
+//will return json string
+//AzkabanConfig azkaban config
+// tail request path
+func Get(config inter.AzkabanConfig, tail string) string {
 	client := &http.Client{}
-	request, err := http.NewRequest("GET", config.Url, nil) //建立一个请求
+	request, err := http.NewRequest("GET", config.Url+tail, nil) //建立一个请求
 	if err != nil {
 		fmt.Println("Fatal error ", err.Error())
 		os.Exit(0)
@@ -21,10 +25,10 @@ func Get(config inter.AzkabanConfig)  {
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 	request.Header.Add("Accept-Language", "ja,zh-CN;q=0.8,zh;q=0.6")
 	request.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0")
-	request.Header.Add("X-Requested-With","XMLHttpRequest")
+	request.Header.Add("X-Requested-With", "XMLHttpRequest")
 	response, err := client.Do(request) //提交
-	if request == nil {
-		os.Exit(1)
+	if request == nil || err != nil {
+		return "{}"
 	}
 	defer response.Body.Close()
 	cookies := response.Cookies() //遍历cookies
@@ -34,45 +38,67 @@ func Get(config inter.AzkabanConfig)  {
 
 	body, err1 := ioutil.ReadAll(response.Body)
 	if err1 != nil {
-		// handle error
+		fmt.Println("Read Response String Error ", err1.Error())
 	}
 	fmt.Println(string(body)) //网页源码
+	return string(body)
 }
 
-// post
-func Post(config inter.AzkabanConfig)  {
+// post request
+//return response json string
+//AzkabanConfig azkaban config
+// tail request path
+func Post(config inter.AzkabanConfig, pars map[string]string, tail string) string {
 	client := &http.Client{}
-	reqest, err := http.NewRequest("POST", config.Url, strings.NewReader("name=1&age=2"))
-	if err != nil {
-		// handle error
+	resultByte, errError := json.Marshal(pars)
+	if errError != nil {
+		fmt.Println("Read Response String Error ", errError.Error())
+		return "{}"
 	}
-
-	reqest.Header.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	reqest.Header.Add("Accept-Language", "ja,zh-CN;q=0.8,zh;q=0.6")
-	reqest.Header.Add("Connection", "keep-alive")
-	reqest.Header.Add("Cookie", "设置cookie")
-	reqest.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0")
-	resp, err := client.Do(reqest)
+	retest, err := http.NewRequest("POST", config.Url+tail, strings.NewReader(string(resultByte)))
+	if err != nil {
+		fmt.Println("Fatal error ", err.Error())
+		os.Exit(0)
+	}
+	retest.Header.Add("Accept", "application/x-www-form-urlencoded; charset=utf-88")
+	retest.Header.Add("X-Requested-With", "XMLHttpRequest")
+	resp, err := client.Do(retest)
+	if resp == nil || err != nil {
+		return "{}"
+	}
 	cookies := resp.Cookies()
 	for _, cookie := range cookies {
 		fmt.Println("cookie:", cookie)
 	}
 	defer resp.Body.Close()
 
-	_, err1 := ioutil.ReadAll(resp.Body)
+	body, err1 := ioutil.ReadAll(resp.Body)
 	if err1 != nil {
-		// handle error
+		fmt.Println("Read Response String Error ", err1.Error())
 	}
-
-	resp.Body.Read()
-	fmt.Println(string())
+	fmt.Println(string(body)) //网页源码
+	return string(body)
 }
+
 //登录
-func login() string {
-
+func Login() string {
+	azkabanConfig := inter.DefaultAzkabanConfig()
+	par := map[string]string{
+		"action":   "login",
+		"username": azkabanConfig.UserName,
+		"password": azkabanConfig.Password,
+	}
+	reqeust := Post(azkabanConfig, par, "")
+	fmt.Println("Response String  ", reqeust)
+	return ""
 }
-//创建项目
 
+//创建项目
+// name 项目名称 必填
+//description 描述 必填
+func CreateProject(name string, description string) string  {
+	azkabanConfig := inter.DefaultAzkabanConfig()
+}
 //删除项目
 
 //上传zip 上传依赖文件 zip包

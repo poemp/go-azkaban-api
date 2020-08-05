@@ -2,7 +2,7 @@ package inter
 
 //this is to azkaban config
 const (
-	Url      = "http://39.96.102.36:8083"
+	Url      = "http://39.105.240.237:8083/"
 	UserName = "azkaban"
 	Password = "azkaban"
 )
