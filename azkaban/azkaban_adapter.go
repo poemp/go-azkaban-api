@@ -22,9 +22,7 @@ func Get(config inter.AzkabanConfig, tail string) string {
 		os.Exit(0)
 	}
 	//Add 头协议
-	request.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-	request.Header.Add("Accept-Language", "ja,zh-CN;q=0.8,zh;q=0.6")
-	request.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0")
+	request.Header.Add("Accept", "application/x-www-form-urlencoded; charset=utf-88")
 	request.Header.Add("X-Requested-With", "XMLHttpRequest")
 	response, err := client.Do(request) //提交
 	if request == nil || err != nil {
