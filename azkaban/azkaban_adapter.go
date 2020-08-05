@@ -9,15 +9,21 @@ import (
 	"os"
 	"strings"
 )
+// this interface
+type Azkaban interface {
+	Login() string
+	CreateProject(name string, description string) string
+}
 
-type Adapter struct {
+type adapter struct {
 	SessionId string
 }
+
 // it's get request
 //will return json string
 //AzkabanConfig azkaban config
 // tail request path
-func (adapter Adapter) Get(config inter.AzkabanConfig, tail string) string {
+func (adapter) Get(config inter.AzkabanConfig, tail string) string {
 	client := &http.Client{}
 	request, err := http.NewRequest("GET", config.Url+tail, nil) //建立一个请求
 	if err != nil {
@@ -49,7 +55,7 @@ func (adapter Adapter) Get(config inter.AzkabanConfig, tail string) string {
 //return response json string
 //AzkabanConfig azkaban config
 // tail request path
-func (adapter Adapter) Post(config inter.AzkabanConfig, pars map[string]string, tail string) string {
+func (adapter) Post(config inter.AzkabanConfig, pars map[string]string, tail string) string {
 	client := &http.Client{}
 	resultByte, errError := json.Marshal(pars)
 	if errError != nil {
@@ -81,15 +87,18 @@ func (adapter Adapter) Post(config inter.AzkabanConfig, pars map[string]string, 
 	return string(body)
 }
 
-//登录
-func Login() string {
+type AzkabanAdapter struct {
+
+}
+//登录 126
+func (a AzkabanAdapter) Login() string {
 	azkabanConfig := inter.DefaultAzkabanConfig()
 	par := map[string]string{
 		"action":   "login",
 		"username": azkabanConfig.UserName,
 		"password": azkabanConfig.Password,
 	}
-	d := Adapter{}
+	d := adapter{}
 	reqeust := d.Post(azkabanConfig, par, "")
 	fmt.Println("Response String  ", reqeust)
 	return ""
@@ -98,10 +107,11 @@ func Login() string {
 //创建项目
 // name 项目名称 必填
 //description 描述 必填
-func CreateProject(name string, description string) string  {
+func (a AzkabanAdapter) CreateProject(name string, description string) string  {
 	azkabanConfig := inter.DefaultAzkabanConfig()
 }
 //删除项目
+
 
 //上传zip 上传依赖文件 zip包
 
