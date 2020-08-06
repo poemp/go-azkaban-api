@@ -8,6 +8,5 @@ func main() {
 	println("Hello GoLang")
 	a := azkaban.AzkabanAdapter{}
 
-
-	a.Login()
+	_, _ = a.CreateProject("GoLongProject", "GoLongProject")
 }

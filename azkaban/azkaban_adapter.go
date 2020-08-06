@@ -4,11 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/json-iterator/go"
 	"github.com/poemp/go-azkaban-api/inter"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
+)
+
+const (
+	ErrorMsg   = "error"
+	SuccessMsg = "success"
 )
 
 var seesion string
@@ -87,7 +94,7 @@ func (adapter) Get(config inter.AzkabanConfig, tail string) (string, error) {
 		os.Exit(0)
 	}
 	//Add 头协议
-	request.Header.Add("Accept", "application/x-www-form-urlencoded; charset=utf-88")
+	request.Header.Add("Accept", "application/x-www-form-urlencoded; charset=utf-8")
 	request.Header.Add("X-Requested-With", "XMLHttpRequest")
 	response, err := client.Do(request) //提交
 	if request == nil || err != nil {
@@ -113,13 +120,6 @@ func (adapter) Get(config inter.AzkabanConfig, tail string) (string, error) {
 // tail request path
 func (adapter) Post(config inter.AzkabanConfig, pars map[string]string, tail string) (string, error) {
 	client := &http.Client{}
-	if seesion != "" {
-		pars["session.id"] = seesion
-	} else {
-		d := adapter{}
-		_, _ = d.Login()
-		pars["session.id"] = seesion
-	}
 	resultByte, errError := json.Marshal(pars)
 	if errError != nil {
 		fmt.Println("Read Response String Error ", errError.Error())
@@ -131,8 +131,8 @@ func (adapter) Post(config inter.AzkabanConfig, pars map[string]string, tail str
 		os.Exit(0)
 	}
 
-	retest.Header.Add("Accept", "application/x-www-form-urlencoded; charset=utf-88")
 	retest.Header.Add("X-Requested-With", "XMLHttpRequest")
+	retest.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(retest)
 	if err != nil {
 		return "{}", errors.New(" this http is error, please check . " + err.Error())
@@ -147,23 +147,66 @@ func (adapter) Post(config inter.AzkabanConfig, pars map[string]string, tail str
 	if err1 != nil {
 		fmt.Println("Read Response String Error ", err1.Error())
 	}
-	fmt.Println(string(body)) //网页源码
+	return string(body), nil
+}
+
+//模拟提交form表单
+func (adapter) PostFrom(config inter.AzkabanConfig, pars map[string]string, tail string) (string, error) {
+	client := &http.Client{}
+
+	//post要提交的数据
+	dataUrlVal := url.Values{}
+	for key, val := range pars {
+		dataUrlVal.Add(key, val)
+	}
+
+	retest, err := http.NewRequest("POST", config.Url + tail, strings.NewReader(dataUrlVal.Encode()))
+	if err != nil {
+		fmt.Println("Fatal error ", err.Error())
+		return "", err
+	}
+
+	retest.Header.Add("Accept", "application/json, text/javascript, */*; q=0.01")
+	retest.Header.Add("X-Requested-With", "XMLHttpRequest")
+	retest.Header.Add("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Safari/537.36")
+	retest.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+	resp, err := client.Do(retest)
+	if err != nil {
+		return "{}", errors.New(" this http is error, please check . " + err.Error())
+	}
+	cookies := resp.Cookies()
+	for _, cookie := range cookies {
+		fmt.Println("Cookie:", cookie)
+	}
+	defer resp.Body.Close()
+
+	body, err1 := ioutil.ReadAll(resp.Body)
+	if err1 != nil {
+		fmt.Println("Read Response String Error ", err1.Error())
+	}
 	return string(body), nil
 }
 
 //登录 126
 func (adapter) Login() (string, error) {
 	azkabanConfig := inter.DefaultAzkabanConfig()
-	par := map[string]string{
+	pars := map[string]string{
 		"action":   "login",
 		"username": azkabanConfig.UserName,
 		"password": azkabanConfig.Password,
 	}
 	d := adapter{}
-	reqeust, _ := d.Post(azkabanConfig, par, "")
-	fmt.Println("Response String  ", reqeust)
-	seesion = ""
-	return "", nil
+	body, err := d.PostFrom(azkabanConfig, pars, "")
+	if err != nil {
+		return "", err
+	}
+	jsonData := jsoniter.Get([]byte(body))
+	message := jsonData.Get("message").ToString()
+	if "" != message {
+		return "", errors.New(message)
+	}
+	seesion = jsonData.Get("session.id").ToString()
+	return seesion, nil
 }
 
 // azkaban adapter
@@ -175,7 +218,31 @@ type AzkabanAdapter struct {
 //description 描述 必填
 func (a AzkabanAdapter) CreateProject(name string, description string) (string, error) {
 	azkabanConfig := inter.DefaultAzkabanConfig()
-	return "{}", nil
+
+	d := adapter{}
+	if seesion == "" {
+		_, err := d.Login()
+		if err != nil {
+			return ErrorMsg, err
+		}
+	}
+
+	parameters := map[string]string{
+		"session.id":  seesion,
+		"action":      "create",
+		"name":        name,
+		"description": description,
+	}
+
+	request, _ := d.PostFrom(azkabanConfig, parameters, "/manager")
+	fmt.Printf("Azkaban Create Project Request:" + request)
+	jsonData := jsoniter.Get([]byte(request))
+	status := jsonData.Get("status").ToString()
+	if "success" == status {
+		return "success", nil
+	}
+	errorMessage := jsonData.Get("message").ToString()
+	return errorMessage, errors.New(errorMessage)
 }
 
 //删除项目
