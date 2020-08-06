@@ -118,7 +118,7 @@ func (adapter) Get(config inter.AzkabanConfig, tail string) (string, error) {
 //return response json string
 //AzkabanConfig azkaban config
 // tail request path
-func (adapter) Post(config inter.AzkabanConfig, pars map[string]string, tail string) (string, error) {
+func (adapter) PostJson(config inter.AzkabanConfig, pars map[string]string, tail string) (string, error) {
 	client := &http.Client{}
 	resultByte, errError := json.Marshal(pars)
 	if errError != nil {
@@ -151,6 +151,9 @@ func (adapter) Post(config inter.AzkabanConfig, pars map[string]string, tail str
 }
 
 //模拟提交form表单
+//config	azkaban配置
+//pars 		参数
+//tail 		后缀
 func (adapter) PostFrom(config inter.AzkabanConfig, pars map[string]string, tail string) (string, error) {
 	client := &http.Client{}
 
@@ -160,7 +163,7 @@ func (adapter) PostFrom(config inter.AzkabanConfig, pars map[string]string, tail
 		dataUrlVal.Add(key, val)
 	}
 
-	retest, err := http.NewRequest("POST", config.Url + tail, strings.NewReader(dataUrlVal.Encode()))
+	retest, err := http.NewRequest("POST", config.Url+tail, strings.NewReader(dataUrlVal.Encode()))
 	if err != nil {
 		fmt.Println("Fatal error ", err.Error())
 		return "", err
@@ -168,7 +171,7 @@ func (adapter) PostFrom(config inter.AzkabanConfig, pars map[string]string, tail
 
 	retest.Header.Add("Accept", "application/json, text/javascript, */*; q=0.01")
 	retest.Header.Add("X-Requested-With", "XMLHttpRequest")
-	retest.Header.Add("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Safari/537.36")
+	retest.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Safari/537.36")
 	retest.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
 	resp, err := client.Do(retest)
 	if err != nil {
@@ -234,12 +237,12 @@ func (a AzkabanAdapter) CreateProject(name string, description string) (string, 
 		"description": description,
 	}
 
-	request, _ := d.PostFrom(azkabanConfig, parameters, "/manager")
+	request, _ := d.PostFrom(azkabanConfig, parameters, "manager")
 	fmt.Printf("Azkaban Create Project Request:" + request)
 	jsonData := jsoniter.Get([]byte(request))
 	status := jsonData.Get("status").ToString()
-	if "success" == status {
-		return "success", nil
+	if SuccessMsg == status {
+		return SuccessMsg, nil
 	}
 	errorMessage := jsonData.Get("message").ToString()
 	return errorMessage, errors.New(errorMessage)
